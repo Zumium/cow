@@ -1,0 +1,22 @@
+hash: 4c830c0845aa4b309db80a24d7ea7d6ec699885f61ee1ff5baa523ddd954f47c
+updated: 2017-05-08T00:19:03.692733286+08:00
+imports:
+- name: github.com/cyfdecyf/bufio
+  version: 9601756e2a6b5fa8ca6749ce4f73f6afdd83030d
+- name: github.com/cyfdecyf/color
+  version: 31d518c963d22b95d500ab628c1d1d1b8eff2ab9
+- name: github.com/cyfdecyf/leakybuf
+  version: ffae040843bee2891b6306d1d085c25ca822e72c
+- name: github.com/shadowsocks/shadowsocks-go
+  version: 97a5c71f80ba5f5b3e549f14a619fe557ff4f3c9
+  subpackages:
+  - shadowsocks
+- name: github.com/Yawning/chacha20
+  version: 2524561b8ee24c13b0aa1526d827571ab3061eac
+- name: golang.org/x/crypto
+  version: 5a033cc77e57eca05bdb50522851d29e03569cbe
+  subpackages:
+  - blowfish
+  - cast5
+  - salsa20/salsa
+testImports: []
