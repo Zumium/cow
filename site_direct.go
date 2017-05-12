@@ -5,6 +5,8 @@ var directDomainList = []string{
 	"xunlei.com", // 迅雷
 	"kankan.com",
 	"kanimg.com",
+	"bilibili.com",
+	"acfun.cn",
 
 	"tdimg.com", // 土豆
 	"tudou.com",

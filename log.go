@@ -53,6 +53,7 @@ func initLog() {
 	if config.LogFile != "" {
 		if f, err := os.OpenFile(expandTilde(config.LogFile),
 			os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0600); err != nil {
+			// 打开日志文件
 			fmt.Printf("Can't open log file, logging to stdout: %v\n", err)
 		} else {
 			logFile = f

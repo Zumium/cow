@@ -29,21 +29,25 @@ func lookPath() (argv0 string, err error) {
 }
 
 func main() {
+	// quit是退出信号通道
 	quit = make(chan struct{})
 	// Parse flags after load config to allow override options in config
+	// 解析flags来覆盖默认设置
 	cmdLineConfig := parseCmdLineConfig()
 	if cmdLineConfig.PrintVer {
+		//如果需要打印版本号
+		//则打印后退出
 		printVersion()
 		os.Exit(0)
 	}
 
 	parseConfig(cmdLineConfig.RcFile, cmdLineConfig)
 
-	initSelfListenAddr()
-	initLog()
-	initAuth()
-	initSiteStat()
-	initPAC() // initPAC uses siteStat, so must init after site stat
+	initSelfListenAddr() // 初始化监听地址
+	initLog()            // 初始化日志
+	initAuth()           // 初始化用户验证
+	initSiteStat()       // 初始化站点状态
+	initPAC()            // 初始化PAC, initPAC uses siteStat, so must init after site stat
 
 	initStat()
 
@@ -63,9 +67,10 @@ func main() {
 		runtime.GOMAXPROCS(config.Core)
 	}
 
-	go sigHandler()
-	go runSSH()
+	go sigHandler() //启动信号处理协程
+	go runSSH()     //启动SSH
 	if config.EstimateTimeout {
+		//启动超时预计
 		go runEstimateTimeout()
 	} else {
 		info.Println("timeout estimation disabled")
@@ -74,12 +79,13 @@ func main() {
 	var wg sync.WaitGroup
 	wg.Add(len(listenProxy))
 	for _, proxy := range listenProxy {
+		//启动各代理
 		go proxy.Serve(&wg, quit)
 	}
 
-	wg.Wait()
+	wg.Wait() //等待各代理结束运行
 
-	if relaunch {
+	if relaunch { //如果程序被设置为重启
 		info.Println("Relunching cow...")
 		// Need to fork me.
 		argv0, err := lookPath()
@@ -88,7 +94,7 @@ func main() {
 			return
 		}
 
-		err = syscall.Exec(argv0, os.Args, os.Environ())
+		err = syscall.Exec(argv0, os.Args, os.Environ()) //在当前进程中调用exec系统调用
 		if err != nil {
 			errl.Println(err)
 		}

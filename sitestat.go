@@ -52,6 +52,7 @@ func (d *Date) UnmarshalJSON(input []byte) error {
 	return err
 }
 
+//=======================VisitCnt===========================
 // COW don't need very accurate visit count, so update to visit count value is
 // not protected.
 type VisitCnt struct {
@@ -167,15 +168,20 @@ func (vc *VisitCnt) BlockedVisit() {
 	vc.Direct = 0
 }
 
+//=======================VisitCnt===========================
+//=======================SiteStat===========================
+// SiteStat 维护了各个域名的状态信息
 type SiteStat struct {
-	Update Date                 `json:"update"`
-	Vcnt   map[string]*VisitCnt `json:"site_info"` // Vcnt uses host as key
-	vcLock sync.RWMutex
+	Update Date `json:"update"`
+	// 主要保存域名相关信息
+	// Vcnt uses host as key, stands for "visit count"
+	Vcnt   map[string]*VisitCnt `json:"site_info"`
+	vcLock sync.RWMutex         // Vcnt的临界保护
 
 	// Whether a domain has blocked host. Used to avoid considering a domain as
 	// direct though it has blocked hosts.
-	hasBlockedHost map[string]bool
-	hbhLock        sync.RWMutex
+	hasBlockedHost map[string]bool // 域名 => 是否主机部分已经被屏蔽
+	hbhLock        sync.RWMutex    // hasBlockedHost的临界保护
 }
 
 func newSiteStat() *SiteStat {
@@ -335,21 +341,25 @@ func (ss *SiteStat) loadUserList() {
 // sites.
 func (ss *SiteStat) filterSites() {
 	// It's not safe to remove element while iterating over a map.
+	// 先保存要移除的网址，因为在遍历map时移除很危险
 	var removeSites []string
 
 	// find what to remove first
-	ss.vcLock.RLock()
+	ss.vcLock.RLock() // 对Vcnt加读锁
 	for site, vcnt := range ss.Vcnt {
 		if vcnt.userSpecified() {
+			// 如果是用户设置的，则不移除
 			continue
 		}
 		if vcnt.isStale() {
+			// 如果是陈旧的记录，则移除
 			removeSites = append(removeSites, site)
 			continue
 		}
 		var dmcnt *VisitCnt
 		domain := host2Domain(site)
 		if domain != site {
+			// 如果域名和站点不一样（三级或更高级域名）
 			dmcnt = ss.get(domain)
 		}
 		if dmcnt != nil && dmcnt.userSpecified() {
@@ -359,6 +369,7 @@ func (ss *SiteStat) filterSites() {
 	ss.vcLock.RUnlock()
 
 	// do remove
+	// 对Vcnt加写锁
 	ss.vcLock.Lock()
 	for _, site := range removeSites {
 		delete(ss.Vcnt, site)
@@ -421,7 +432,9 @@ func (ss *SiteStat) GetDirectList() []string {
 	return lst
 }
 
-var siteStat = newSiteStat()
+//=======================SiteStat===========================
+
+var siteStat = newSiteStat() // global site stat
 
 func initSiteStat() {
 	err := siteStat.load(config.StatFile)
@@ -441,6 +454,7 @@ func initSiteStat() {
 	// get updated stat.
 	go func() {
 		for {
+			// 每5分钟保存一次
 			time.Sleep(5 * time.Minute)
 			storeSiteStat(siteStatCont)
 		}
@@ -461,6 +475,7 @@ func storeSiteStat(cont byte) {
 	storeLock.Lock()
 	defer storeLock.Unlock()
 
+	// 临界区
 	if siteStatFini {
 		return
 	}

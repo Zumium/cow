@@ -21,6 +21,7 @@ const (
 	defaultEstimateTarget = "example.com"
 )
 
+// LoadBalanceMode -- 负载均衡模式
 type LoadBalanceMode byte
 
 const (
@@ -39,18 +40,19 @@ var defaultTunnelAllowedPort = []string{
 	"2401", "3690", "9418", // cvspserver, svn, git
 }
 
+// Config 包含了各项配置的值
 type Config struct {
-	RcFile      string          // config file
-	LogFile     string          // path for log file
-	AlwaysProxy bool            // whether we should alwyas use parent proxy
-	LoadBalance LoadBalanceMode // select load balance mode
+	RcFile      string          // config file 配置文件
+	LogFile     string          // path for log file 日志文件路径
+	AlwaysProxy bool            // whether we should alwyas use parent proxy 是否始终使用代理
+	LoadBalance LoadBalanceMode // select load balance mode 负载均衡模式
 
 	TunnelAllowedPort map[string]bool // allowed ports to create tunnel
 
-	SshServer []string
+	SshServer []string // SSH 服务器
 
 	// authenticate client
-	UserPasswd     string
+	UserPasswd     string // format: user:passwd:[port] pairs
 	UserPasswdFile string // file that contains user:passwd:[port] pairs
 	AllowedClient  string
 	AuthTimeout    time.Duration
@@ -109,6 +111,7 @@ func initConfig(rcFile string) {
 // Whether command line options specifies listen addr
 var cmdHasListenAddr bool
 
+// parseCmdLineConfig解析命令行参数
 func parseCmdLineConfig() *Config {
 	var c Config
 	var listenAddr string
@@ -303,6 +306,7 @@ func (lp listenParser) ListenCow(val string) {
 }
 
 // configParser provides functions to parse options in config file.
+// configParser 提供了解析配置文件中的选项的方法
 type configParser struct{}
 
 func (p configParser) ParseProxy(val string) {
@@ -593,15 +597,20 @@ func (p configParser) ParseEstimateTarget(val string) {
 
 // overrideConfig should contain options from command line to override options
 // in config file.
+// parseConfig 函数从rc参数指定的文件中读取配置，覆盖override中相应的配置
 func parseConfig(rc string, override *Config) {
+	// DEBUG
 	// fmt.Println("rcFile:", path)
-	f, err := os.Open(expandTilde(rc))
+	// DEBUG
+	// 打开配置文件
+	f, err := os.Open(expandTilde(rc)) //expandTilde展开路径中的 ~ 符号为home目录路径
 	if err != nil {
 		Fatal("Error opening config file:", err)
 	}
 
 	IgnoreUTF8BOM(f)
 
+	// 在读取的文件外包装一层Buffer
 	scanner := bufio.NewScanner(f)
 
 	parser := reflect.ValueOf(configParser{})
@@ -609,23 +618,24 @@ func parseConfig(rc string, override *Config) {
 	var lines []string // store lines for upgrade
 
 	var n int
-	for scanner.Scan() {
+	for scanner.Scan() { //扫描配置文件中的一行
 		lines = append(lines, scanner.Text())
 
-		n++
-		line := strings.TrimSpace(scanner.Text())
+		n++                                       //计数
+		line := strings.TrimSpace(scanner.Text()) //移除前后的空白字符
 		if line == "" || line[0] == '#' {
+			//忽略空行和注释行
 			continue
 		}
 
-		v := strings.SplitN(line, "=", 2)
+		v := strings.SplitN(line, "=", 2) // key=value形式
 		if len(v) != 2 {
 			Fatal("config syntax error on line", n)
 		}
-		key, val := strings.TrimSpace(v[0]), strings.TrimSpace(v[1])
+		key, val := strings.TrimSpace(v[0]), strings.TrimSpace(v[1]) // 去掉可能存在的空白字符
 
-		methodName := "Parse" + strings.ToUpper(key[0:1]) + key[1:]
-		method := parser.MethodByName(methodName)
+		methodName := "Parse" + strings.ToUpper(key[0:1]) + key[1:] // 拼凑方法名 -- ParseXxx 形式
+		method := parser.MethodByName(methodName)                   // 从parser中获取相应方法
 		if method == zeroMethod {
 			Fatalf("no such option \"%s\"\n", key)
 		}
@@ -633,10 +643,11 @@ func parseConfig(rc string, override *Config) {
 		if val == "" && key != "shadowMethod" && key != "logFile" {
 			Fatalf("empty %s, please comment or remove unused option\n", key)
 		}
-		args := []reflect.Value{reflect.ValueOf(val)}
-		method.Call(args)
+		args := []reflect.Value{reflect.ValueOf(val)} // 组装参数列表
+		method.Call(args)                             // 调用方法
 	}
 	if scanner.Err() != nil {
+		// 扫描器报错
 		Fatalf("Error reading rc file: %v\n", scanner.Err())
 	}
 	f.Close()
@@ -645,6 +656,7 @@ func parseConfig(rc string, override *Config) {
 	checkConfig()
 
 	if configNeedUpgrade {
+		// 如果需要升级配置
 		upgradeConfig(rc, lines)
 	}
 }
@@ -712,6 +724,7 @@ func upgradeConfig(rc string, lines []string) {
 	}
 }
 
+// overrideConfig 将override中的内容覆盖oldconfig中相应的内容
 func overrideConfig(oldconfig, override *Config) {
 	newVal := reflect.ValueOf(override).Elem()
 	oldVal := reflect.ValueOf(oldconfig).Elem()
@@ -720,8 +733,10 @@ func overrideConfig(oldconfig, override *Config) {
 	for i := 0; i < newVal.NumField(); i++ {
 		newField := newVal.Field(i)
 		oldField := oldVal.Field(i)
+		// DEBUG
 		// log.Printf("%d: %s %s = %v\n", i,
 		// typeOfT.Field(i).Name, newField.Type(), newField.Interface())
+		// DEBUG
 		switch newField.Kind() {
 		case reflect.String:
 			s := newField.String()
@@ -739,6 +754,7 @@ func overrideConfig(oldconfig, override *Config) {
 	oldconfig.EstimateTimeout = override.EstimateTimeout
 }
 
+// checkConfig 检查配置是否有效
 // Must call checkConfig before using config.
 func checkConfig() {
 	checkShadowsocks()

@@ -236,6 +236,7 @@ func getUserHomeDir() string {
 	return home
 }
 
+// expandTilde 展开路径中的 ~ 符号，即替换为home目录
 func expandTilde(pth string) string {
 	if len(pth) > 0 && pth[0] == '~' {
 		home := getUserHomeDir()
@@ -406,6 +407,7 @@ func IgnoreUTF8BOM(f *os.File) error {
 	return err
 }
 
+// hostAddr 返回所有本机IP地址
 // Return all host IP addresses.
 func hostAddr() (addr []string) {
 	allAddr, err := net.InterfaceAddrs()
