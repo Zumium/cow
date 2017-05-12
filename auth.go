@@ -5,13 +5,14 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
-	"github.com/cyfdecyf/bufio"
 	"net"
 	"os"
 	"strconv"
 	"strings"
 	"text/template"
 	"time"
+
+	"github.com/cyfdecyf/bufio"
 )
 
 const (
@@ -117,6 +118,7 @@ func parseAllowedClient(val string) {
 	}
 }
 
+// addUserPasswd 向auth.user中添加新用户
 func addUserPasswd(val string) {
 	if val == "" {
 		return
@@ -153,12 +155,12 @@ func initAuth() {
 	if config.UserPasswd != "" ||
 		config.UserPasswdFile != "" ||
 		config.AllowedClient != "" {
-		auth.required = true
+		auth.required = true // 若配置中UserPasswd或UserPasswdFile或AllowedClient不为空时，代表启动用户身份验证
 	} else {
 		return
 	}
 
-	auth.user = make(map[string]*authUser)
+	auth.user = make(map[string]*authUser) //map 用户名 -> authUser结构体
 
 	addUserPasswd(config.UserPasswd)
 	loadUserPasswdFile(config.UserPasswdFile)
@@ -177,7 +179,7 @@ func initAuth() {
 	}
 }
 
-// Return err = nil if authentication succeed. nonce would be not empty if
+// Authenticate return err = nil if authentication succeed. nonce would be not empty if
 // authentication is needed, and should be passed back on subsequent call.
 func Authenticate(conn *clientConn, r *Request) (err error) {
 	clientIP, _, _ := net.SplitHostPort(conn.RemoteAddr().String())

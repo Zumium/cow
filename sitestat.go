@@ -441,6 +441,7 @@ func initSiteStat() {
 	// get updated stat.
 	go func() {
 		for {
+			// 每5分钟保存一次
 			time.Sleep(5 * time.Minute)
 			storeSiteStat(siteStatCont)
 		}
@@ -461,6 +462,7 @@ func storeSiteStat(cont byte) {
 	storeLock.Lock()
 	defer storeLock.Unlock()
 
+	// 临界区
 	if siteStatFini {
 		return
 	}

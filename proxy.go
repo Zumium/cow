@@ -50,7 +50,7 @@ const sslLeastDuration = time.Second
 
 // Some code are learnt from the http package
 
-// encapulate actual error for an retry error
+// RetryError encapulate actual error for an retry error
 type RetryError struct {
 	error
 }
@@ -134,9 +134,8 @@ func newHttpProxy(addr, addrInPAC string) *httpProxy {
 func (proxy *httpProxy) genConfig() string {
 	if proxy.addrInPAC != "" {
 		return fmt.Sprintf("listen = http://%s %s", proxy.addr, proxy.addrInPAC)
-	} else {
-		return fmt.Sprintf("listen = http://%s", proxy.addr)
 	}
+	return fmt.Sprintf("listen = http://%s", proxy.addr)
 }
 
 func (proxy *httpProxy) Addr() string {
@@ -169,8 +168,8 @@ func (hp *httpProxy) Serve(wg *sync.WaitGroup, quit <-chan struct{}) {
 	}
 	info.Printf("COW %s listen http %s, PAC url %s\n", version, hp.addr, pacURL)
 
-	for {
-		conn, err := ln.Accept()
+	for { // 主循环
+		conn, err := ln.Accept() // 接收新连接
 		if err != nil && !exit {
 			errl.Printf("http proxy(%s) accept %v\n", ln.Addr(), err)
 			if isErrTooManyOpenFd(err) {
@@ -183,8 +182,8 @@ func (hp *httpProxy) Serve(wg *sync.WaitGroup, quit <-chan struct{}) {
 			debug.Println("exiting the http listner")
 			break
 		}
-		c := newClientConn(conn, hp)
-		go c.serve()
+		c := newClientConn(conn, hp) // 得到*clientConn
+		go c.serve()                 // 启动*clientConn.serve() 开始处理
 
 	}
 }
@@ -305,14 +304,16 @@ func (c *clientConn) unsetReadTimeout(msg string) {
 // Listen address as key, not including port part.
 var selfListenAddr map[string]bool
 
+// initSelfListenAddr 初始化监听地址
 // Called in main, so no need to protect concurrent initialization.
 func initSelfListenAddr() {
 	selfListenAddr = make(map[string]bool)
 	// Add empty host to self listen addr, in case there's no Host header.
 	selfListenAddr[""] = true
 	for _, proxy := range listenProxy {
-		addr := proxy.Addr()
+		addr := proxy.Addr() // addr 监听地址，address:port 格式
 		// Handle wildcard address.
+		// 兼容 :8080 或 0.0.0.0:8080 格式
 		if addr[0] == ':' || strings.HasPrefix(addr, "0.0.0.0") {
 			for _, ad := range hostAddr() {
 				selfListenAddr[ad] = true
