@@ -52,7 +52,7 @@ type Config struct {
 	SshServer []string // SSH 服务器
 
 	// authenticate client
-	UserPasswd     string
+	UserPasswd     string // format: user:passwd:[port] pairs
 	UserPasswdFile string // file that contains user:passwd:[port] pairs
 	AllowedClient  string
 	AuthTimeout    time.Duration

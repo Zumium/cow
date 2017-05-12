@@ -52,6 +52,7 @@ func (d *Date) UnmarshalJSON(input []byte) error {
 	return err
 }
 
+//=======================VisitCnt===========================
 // COW don't need very accurate visit count, so update to visit count value is
 // not protected.
 type VisitCnt struct {
@@ -167,15 +168,20 @@ func (vc *VisitCnt) BlockedVisit() {
 	vc.Direct = 0
 }
 
+//=======================VisitCnt===========================
+//=======================SiteStat===========================
+// SiteStat 维护了各个域名的状态信息
 type SiteStat struct {
-	Update Date                 `json:"update"`
-	Vcnt   map[string]*VisitCnt `json:"site_info"` // Vcnt uses host as key
-	vcLock sync.RWMutex
+	Update Date `json:"update"`
+	// 主要保存域名相关信息
+	// Vcnt uses host as key, stands for "visit count"
+	Vcnt   map[string]*VisitCnt `json:"site_info"`
+	vcLock sync.RWMutex         // Vcnt的临界保护
 
 	// Whether a domain has blocked host. Used to avoid considering a domain as
 	// direct though it has blocked hosts.
-	hasBlockedHost map[string]bool
-	hbhLock        sync.RWMutex
+	hasBlockedHost map[string]bool // 域名 => 是否主机部分已经被屏蔽
+	hbhLock        sync.RWMutex    // hasBlockedHost的临界保护
 }
 
 func newSiteStat() *SiteStat {
@@ -421,7 +427,9 @@ func (ss *SiteStat) GetDirectList() []string {
 	return lst
 }
 
-var siteStat = newSiteStat()
+//=======================SiteStat===========================
+
+var siteStat = newSiteStat() // global site stat
 
 func initSiteStat() {
 	err := siteStat.load(config.StatFile)
