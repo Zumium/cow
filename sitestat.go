@@ -341,21 +341,25 @@ func (ss *SiteStat) loadUserList() {
 // sites.
 func (ss *SiteStat) filterSites() {
 	// It's not safe to remove element while iterating over a map.
+	// 先保存要移除的网址，因为在遍历map时移除很危险
 	var removeSites []string
 
 	// find what to remove first
-	ss.vcLock.RLock()
+	ss.vcLock.RLock() // 对Vcnt加读锁
 	for site, vcnt := range ss.Vcnt {
 		if vcnt.userSpecified() {
+			// 如果是用户设置的，则不移除
 			continue
 		}
 		if vcnt.isStale() {
+			// 如果是陈旧的记录，则移除
 			removeSites = append(removeSites, site)
 			continue
 		}
 		var dmcnt *VisitCnt
 		domain := host2Domain(site)
 		if domain != site {
+			// 如果域名和站点不一样（三级或更高级域名）
 			dmcnt = ss.get(domain)
 		}
 		if dmcnt != nil && dmcnt.userSpecified() {
@@ -365,6 +369,7 @@ func (ss *SiteStat) filterSites() {
 	ss.vcLock.RUnlock()
 
 	// do remove
+	// 对Vcnt加写锁
 	ss.vcLock.Lock()
 	for _, site := range removeSites {
 		delete(ss.Vcnt, site)
